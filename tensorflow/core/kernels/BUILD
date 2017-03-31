@@ -1616,6 +1616,7 @@ cc_library(
         ":attention_ops",
         ":colorspace_op",
         ":crop_and_resize_op",
+        ":decode_bmp_op",
         ":decode_gif_op",
         ":decode_jpeg_op",
         ":decode_png_op",
@@ -1679,6 +1680,12 @@ tf_kernel_library(
 tf_kernel_library(
     name = "crop_and_resize_op",
     prefix = "crop_and_resize_op",
+    deps = IMAGE_DEPS,
+)
+
+tf_kernel_library(
+    name = "decode_bmp_op",
+    prefix = "decode_bmp_op",
     deps = IMAGE_DEPS,
 )
 
@@ -4273,6 +4280,7 @@ filegroup(
             "encode_jpeg_op.*",
             "decode_jpeg_op.*",
             "decode_gif_op.*",
+            "decode_bmp_op.*",
             "identity_reader_op.*",
             "remote_fused_graph_execute_op.*",
             "fixed_length_record_reader_op.*",

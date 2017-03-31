@@ -103,6 +103,8 @@ Status ReadTensorFromImageFile(string file_name, const int input_height,
                              DecodePng::Channels(wanted_channels));
   } else if (tensorflow::StringPiece(file_name).ends_with(".gif")) {
     image_reader = DecodeGif(root.WithOpName("gif_reader"), file_reader);
+  } else if (tensorflow::StringPiece(file_name).ends_with(".bmp")) {
+    image_reader = DecodeBmp(root.WithOpName("bmp_reader"), file_reader);
   } else {
     // Assume if it's neither a PNG nor a GIF then it must be a JPEG.
     image_reader = DecodeJpeg(root.WithOpName("jpeg_reader"), file_reader,
