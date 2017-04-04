@@ -12,12 +12,30 @@ cc_binary(
     srcs = [
         "main.cc",
     ],
-    linkopts = ["-lm"],
-    deps = [
-        "//tensorflow/cc:cc_ops",
-        "//tensorflow/core:framework_internal",
-        "//tensorflow/core:tensorflow",
-    ],
+    linkopts = select({
+        "//tensorflow:android": [
+            "-pie",
+            "-landroid",
+            "-ljnigraphics",
+            "-llog",
+            "-lm",
+            "-z defs",
+            "-s",
+            "-Wl,--exclude-libs,ALL",
+        ],
+        "//conditions:default": ["-lm",],
+    }),
+    deps = select({
+        "//tensorflow:android": [
+            "//tensorflow/cc:cc_ops",
+            "//tensorflow/core:android_tensorflow_lib",
+        ],
+        "//conditions:default": [
+            "//tensorflow/cc:cc_ops",
+            "//tensorflow/core:framework_internal",
+            "//tensorflow/core:tensorflow",
+        ],
+   }),
 )
 
 filegroup(
