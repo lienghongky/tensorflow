@@ -81,10 +81,10 @@ bazel-bin/tensorflow/tools/graph_transforms/transform_graph \
 --out_graph=optimized_inception_graph.pb \
 --inputs='Mul:0' \
 --outputs='softmax:0' \
---transforms='\
-strip_unused_nodes(type=float, shape="1,299,299,3") \
-remove_nodes(op=Identity, op=CheckNumerics) \
-fold_old_batch_norms \
+--transforms='
+strip_unused_nodes(type=float, shape="1,299,299,3")
+remove_nodes(op=Identity, op=CheckNumerics)
+fold_old_batch_norms
 '
 ```
 
@@ -212,7 +212,7 @@ bazel-bin/tensorflow/tools/graph_transforms/transform_graph \
 --out_graph=optimized_inception_graph.pb \
 --inputs='Mul' \
 --outputs='softmax' \
---transforms='\
+--transforms='
   strip_unused_nodes(type=float, shape="1,299,299,3")
   fold_constants(ignore_errors=true)
   fold_batch_norms
