@@ -35,6 +35,11 @@ load("//tensorflow:workspace.bzl", "tf_workspace")
 #    # Note that the NDK version is not the API level.
 #    api_level=14)
 
+android_ndk_repository(
+    name="androidndk",
+    path="/home/freedom/work/Sdk/ndk-bundle/",
+    api_level=25)
+
 # Please add all new TensorFlow dependencies in workspace.bzl.
 tf_workspace()
 
