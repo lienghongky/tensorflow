@@ -103,7 +103,7 @@ void RunInference(const std::string& graph, const std::string& input_layer_type,
 
   tflite::ops::builtin::BuiltinOpResolver resolver;
 
-  tflite::InterpreterBuilder (*model, resolver)(&interpreter);
+  tflite::InterpreterBuilder(*model, resolver)(&interpreter);
   if (!interpreter) {
     LOG(FATAL) << "Failed to construct interpreter\n";
     exit(-1);

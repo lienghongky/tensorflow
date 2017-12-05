@@ -42,6 +42,7 @@ cc_test(
     ],
     deps = [
         ":bitmap_helpers",
+        ":get_top_n",
         "@com_google_googletest//:gtest",
     ],
 )

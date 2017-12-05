@@ -29,7 +29,8 @@ float input_mean = 127.5;
 float input_std = 127.5;
 
 TEST(LabelImageTest, Lena) {
-  std::string lena_file = "tensorflow/contrib/lite/examples/label_image/testdata/lena.bmp";
+  std::string lena_file =
+      "tensorflow/contrib/lite/examples/label_image/testdata/lena.bmp";
   int height, width, channels;
   uint8_t *data;
 
@@ -37,19 +38,26 @@ TEST(LabelImageTest, Lena) {
   ASSERT_EQ(height, 26);
   ASSERT_EQ(width, 51);
   ASSERT_EQ(channels, 3);
- 
-  uint8_t *out = new uint8_t[26*26*3];
-  downsize<uint8_t>(out, data, 26, 51, 3, 26, 26, 3); 
+
+  uint8_t *out = new uint8_t[26 * 26 * 3];
+  downsize<uint8_t>(out, data, 26, 51, 3, 26, 26, 3);
   ASSERT_EQ(out[0], 0xe1);
-  ASSERT_EQ(out[26*26*3 - 1], 0x4b);
+  ASSERT_EQ(out[26 * 26 * 3 - 1], 0x4b);
+}
+
+TEST(LabelImageTest, GetTopN) {
+  uint8_t in[] = {1, 1, 2, 2, 4, 4, 16, 32, 128, 64};
+
+  std::vector<std::pair<float, int>> top_results;
+  get_top_n<uint8_t>(in, 10, 5, 0.025, &top_results);
+  ASSERT_EQ(top_results.size(), 4);
+  ASSERT_EQ(top_results[0].second, 8);
 }
 
 }  // label_image
 }  // tflite
 
-
-int main(int argc, char** argv) {
-  // On Linux, add: FLAGS_logtostderr = true;
+int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
