@@ -11,9 +11,16 @@ tf_cc_binary(
     name = "label_image",
     srcs = ["label_image.cc"],
     deps = [
+        ":bitmap_helpers",
         "//tensorflow/contrib/lite/kernels:builtin_ops",
     ],
     linkopts = tflite_linkopts() + ["-lm"],
+)
+
+cc_library(
+    name = "bitmap_helpers",
+    srcs = ["bitmap_helpers.cc"],
+    hdrs = ["bitmap_helpers.h"],
 )
 
 filegroup(
