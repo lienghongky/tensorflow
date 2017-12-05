@@ -16,7 +16,7 @@ limitations under the License.
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "bitmap_helpers.h"
+#include "label_image.h"
 
 using ::testing::ElementsAreArray;
 

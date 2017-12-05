@@ -16,6 +16,7 @@ tf_cc_binary(
     srcs = ["label_image.cc"],
     deps = [
         ":bitmap_helpers",
+        ":get_top_n",
         "//tensorflow/contrib/lite/kernels:builtin_ops",
     ],
     linkopts = tflite_linkopts() + ["-lm"],
@@ -24,7 +25,13 @@ tf_cc_binary(
 cc_library(
     name = "bitmap_helpers",
     srcs = ["bitmap_helpers.cc"],
-    hdrs = ["bitmap_helpers.h"],
+    hdrs = ["label_image.h"],
+)
+
+cc_library(
+    name = "get_top_n",
+    srcs = ["get_top_n.cc"],
+    hdrs = ["label_image.h"],
 )
 
 cc_test(

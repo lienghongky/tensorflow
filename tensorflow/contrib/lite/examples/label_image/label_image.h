@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef TENSORFLOW_CONTRIB_LITE_EXAMPLES_LABLE_IMAGE_BITMAP_UTILS_H_
-#define TENSORFLOW_CONTRIB_LITE_EXAMPLES_LABLE_IMAGE_BITMAP_UTILS_H_
+#ifndef TENSORFLOW_CONTRIB_LITE_EXAMPLES_LABEL_IMAGE_LABEL_IMAGE_H_
+#define TENSORFLOW_CONTRIB_LITE_EXAMPLES_LABEL_IMAGE_LABEL_IMAGE_H_
 
 namespace tflite {
 namespace label_image {
@@ -27,7 +27,12 @@ void downsize(T* out, uint8_t* in, int image_height, int image_width,
               int image_channels, int wanted_height, int wanted_width,
               int wanted_channels);
 
+template <class T>
+void get_top_n(T* prediction, const int prediction_size,
+               const size_t num_results, const float threshold,
+               std::vector<std::pair<float, int>>* top_results);
+
 }  // label_image
 }  // tflite
 
-#endif  // TENSORFLOW_CONTRIB_LITE_EXAMPLES_LABLE_IMAGE_BITMAP_UTILS_H_
+#endif  // TENSORFLOW_CONTRIB_LITE_EXAMPLES_LABEL_IMAGE_LABEL_IMAGE_H
