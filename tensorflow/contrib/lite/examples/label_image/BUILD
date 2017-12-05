@@ -7,6 +7,10 @@ licenses(["notice"])  # Apache 2.0
 load("//tensorflow:tensorflow.bzl", "tf_cc_binary")
 load("//tensorflow/contrib/lite:build_def.bzl", "tflite_linkopts")
 
+exports_files(glob([
+    "testdata/*.bmp",
+]))
+
 tf_cc_binary(
     name = "label_image",
     srcs = ["label_image.cc"],
@@ -21,6 +25,18 @@ cc_library(
     name = "bitmap_helpers",
     srcs = ["bitmap_helpers.cc"],
     hdrs = ["bitmap_helpers.h"],
+)
+
+cc_test(
+    name = "label_image_test",
+    srcs = ["label_image_test.cc"],
+    data = [
+        "testdata/lena.bmp",
+    ],
+    deps = [
+        ":bitmap_helpers",
+        "@com_google_googletest//:gtest",
+    ],
 )
 
 filegroup(
