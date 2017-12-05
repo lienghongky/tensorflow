@@ -86,12 +86,9 @@ TfLiteStatus ReadLabelsFile(const string& file_name,
 // Returns the top N confidence values over threshold in the provided vector,
 // sorted by confidence in descending order.
 template <class T>
-static void get_top_n(std::unique_ptr<tflite::Interpreter>& interpreter,
-                      const int prediction_size, const size_t num_results,
-                      const float threshold,
+static void get_top_n(T* prediction, const int prediction_size,
+                      const size_t num_results, const float threshold,
                       std::vector<std::pair<float, int>>* top_results) {
-  T* prediction = interpreter->typed_output_tensor<T>(0);
-
   // Will contain top N results in ascending order.
   std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>>,
                       std::greater<std::pair<float, int>>>
@@ -216,11 +213,9 @@ uint8_t* read_bmp(const std::string& input_bmp_name, int& width, int& height,
 }
 
 template <class T>
-void downsize(std::unique_ptr<tflite::Interpreter>& interpreter, int input,
-              uint8_t* in, int image_height, int image_width,
+void downsize(T* out, uint8_t* in, int image_height, int image_width,
               int image_channels, int wanted_height, int wanted_width,
               int wanted_channels) {
-  T* out = interpreter->typed_tensor<T>(input);
   for (int y = 0; y < wanted_height; ++y) {
     const int in_y = (y * image_height) / wanted_height;
     uint8_t* in_row = in + (in_y * image_width * image_channels);
@@ -318,13 +313,13 @@ void RunInference(const std::string& graph, const std::string& input_layer_type,
   int wanted_channels = dims->data[3];
 
   if (input_floating)
-    downsize<float>(interpreter, input, in, image_height, image_width,
-                    image_channels, wanted_height, wanted_width,
+    downsize<float>(interpreter->typed_tensor<float>(input), in, image_height,
+                    image_width, image_channels, wanted_height, wanted_width,
                     wanted_channels);
   else
-    downsize<uint8_t>(interpreter, input, in, image_height, image_width,
-                      image_channels, wanted_height, wanted_width,
-                      wanted_channels);
+    downsize<uint8_t>(interpreter->typed_tensor<uint8_t>(input), in,
+                      image_height, image_width, image_channels, wanted_height,
+                      wanted_width, wanted_channels);
 
   struct timeval start_time, stop_time;
   gettimeofday(&start_time, NULL);
@@ -346,11 +341,11 @@ void RunInference(const std::string& graph, const std::string& input_layer_type,
   std::vector<std::pair<float, int>> top_results;
 
   if (input_floating)
-    get_top_n<float>(interpreter, output_size, num_results, threshold,
-                     &top_results);
+    get_top_n<float>(interpreter->typed_output_tensor<float>(0), output_size,
+                     num_results, threshold, &top_results);
   else
-    get_top_n<uint8_t>(interpreter, output_size, num_results, threshold,
-                       &top_results);
+    get_top_n<uint8_t>(interpreter->typed_output_tensor<uint8_t>(0),
+                       output_size, num_results, threshold, &top_results);
 
   std::vector<string> labels;
   size_t label_count;
