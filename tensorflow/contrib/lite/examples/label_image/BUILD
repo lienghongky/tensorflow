@@ -5,6 +5,7 @@ package(default_visibility = [
 licenses(["notice"])  # Apache 2.0
 
 load("//tensorflow:tensorflow.bzl", "tf_cc_binary")
+load("//tensorflow/contrib/lite:build_def.bzl", "tflite_linkopts")
 
 tf_cc_binary(
     name = "label_image",
@@ -12,18 +13,7 @@ tf_cc_binary(
     deps = [
         "//tensorflow/contrib/lite/kernels:builtin_ops",
     ],
-    linkopts = select({
-        "//tensorflow:android": [
-            "-s",
-            "-pie",
-            "-landroid",
-            "-llog",
-            "-lm",
-            "-z defs",
-            "-Wl,--exclude-libs,ALL",  # Exclude syms in all libs from auto export
-        ],
-        "//conditions:default": [],
-    }),
+    linkopts = tflite_linkopts() + ["-lm"],
 )
 
 filegroup(
