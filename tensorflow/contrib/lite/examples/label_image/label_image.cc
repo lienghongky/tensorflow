@@ -46,8 +46,8 @@ limitations under the License.
     exit(1);                      \
   }
 
-namespace tensorflow {
-namespace label_image_tflite {
+namespace tflite {
+namespace label_image {
 
 using std::string;
 
@@ -345,9 +345,9 @@ int Main(int argc, char** argv) {
   return 0;
 }
 
-}  // namespace label_image_tflite
-}  // namespace tensorflow
+}  // namespace label_image
+}  // namespace tflite
 
 int main(int argc, char** argv) {
-  return tensorflow::label_image_tflite::Main(argc, argv);
+  return tflite::label_image::Main(argc, argv);
 }

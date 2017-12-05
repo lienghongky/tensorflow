@@ -12,12 +12,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
+
 #ifndef TENSORFLOW_CONTRIB_LITE_EXAMPLES_LABLE_IMAGE_BITMAP_UTILS_H_
 #define TENSORFLOW_CONTRIB_LITE_EXAMPLES_LABLE_IMAGE_BITMAP_UTILS_H_
 
-// Needed to resolve unordered_set hash on older compilers.
-namespace tensorflow {
-namespace label_image_tflite {
+namespace tflite {
+namespace label_image {
 
 uint8_t* decode_bmp(const uint8_t* input, const int row_size,
                     uint8_t* const output, const int width, const int height,
@@ -31,6 +31,7 @@ void downsize(T* out, uint8_t* in, int image_height, int image_width,
               int image_channels, int wanted_height, int wanted_width,
               int wanted_channels);
 
-}  // label_image_tflite
-}  // tensorflow
+}  // label_image
+}  // tflite
+
 #endif  // TENSORFLOW_CONTRIB_LITE_EXAMPLES_LABLE_IMAGE_BITMAP_UTILS_H_
