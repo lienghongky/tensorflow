@@ -36,6 +36,13 @@ limitations under the License.
 #include "tensorflow/contrib/lite/optional_debug_tools.h"
 #include "tensorflow/contrib/lite/string_util.h"
 
+#ifdef GEMMLOWP_PROFILING
+#include "profiling/instrumentation.h"
+#include "profiling/profiler.h"
+
+using namespace gemmlowp;
+#endif
+
 #include "tensorflow/contrib/lite/examples/label_image/bitmap_helpers.h"
 #include "tensorflow/contrib/lite/examples/label_image/get_top_n.h"
 
@@ -158,6 +165,12 @@ void RunInference(Settings* s) {
                       wanted_width, wanted_channels, s);
   }
 
+#ifdef GEMMLOWP_PROFILING
+  if (s->profiling) {
+    RegisterCurrentThreadForProfiling();
+    StartProfiling();
+  }
+#endif
   struct timeval start_time, stop_time;
   gettimeofday(&start_time, NULL);
   for (int i = 0; i < s->loop_count; i++) {
@@ -166,6 +179,9 @@ void RunInference(Settings* s) {
     }
   }
   gettimeofday(&stop_time, NULL);
+#ifdef GEMMLOWP_PROFILING
+  if (s->profiling) FinishProfiling();
+#endif
   LOG(INFO) << "invoked \n";
   LOG(INFO) << "average time: "
             << (get_us(stop_time) - get_us(start_time)) / (s->loop_count * 1000)
@@ -209,7 +225,7 @@ void display_usage() {
             << "--input_std, -s: input standard deviation\n"
             << "--image, -i: image_name.bmp\n"
             << "--labels, -l: labels for the model\n"
-            << "--tflite_mode, -m: model_name.tflite\n"
+            << "--tflite_model, -m: model_name.tflite\n"
             << "--threads, -t: number of threads\n"
             << "--verbose, -v: [0|1] print more information\n"
             << "\n";
@@ -228,6 +244,7 @@ int Main(int argc, char** argv) {
         {"image", required_argument, 0, 'i'},
         {"labels", required_argument, 0, 'l'},
         {"tflite_model", required_argument, 0, 'm'},
+        {"profiling", required_argument, 0, 'p'},
         {"threads", required_argument, 0, 't'},
         {"input_mean", required_argument, 0, 'b'},
         {"input_std", required_argument, 0, 's'},
@@ -236,7 +253,7 @@ int Main(int argc, char** argv) {
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    c = getopt_long(argc, argv, "a:b:c:f:i:l:m:s:t:v:", long_options,
+    c = getopt_long(argc, argv, "a:b:c:f:i:l:m:p:s:t:v:", long_options,
                     &option_index);
 
     /* Detect the end of the options. */
@@ -267,6 +284,9 @@ int Main(int argc, char** argv) {
         break;
       case 'm':
         s.model_name = optarg;
+        break;
+      case 'p':
+        s.profiling = strtol(optarg, (char**)NULL, 10);
         break;
       case 's':
         s.input_std = strtod(optarg, NULL);
