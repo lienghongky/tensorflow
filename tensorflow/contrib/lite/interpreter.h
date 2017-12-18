@@ -17,10 +17,10 @@ limitations under the License.
 #ifndef THIRD_PARTY_TENSORFLOW_CONTRIB_LITE_INTERPRETER_H_
 #define THIRD_PARTY_TENSORFLOW_CONTRIB_LITE_INTERPRETER_H_
 
+#include <sys/time.h>
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
-#include <sys/time.h>
 #include "tensorflow/contrib/lite/allocation.h"
 #include "tensorflow/contrib/lite/context.h"
 #include "tensorflow/contrib/lite/error_reporter.h"
@@ -179,7 +179,7 @@ class Interpreter {
   // read/write access to structure
   TfLiteTensor* tensor(int tensor_index) {
     if (tensor_index >= context_.tensors_size || tensor_index < 0)
-        return nullptr;
+      return nullptr;
     return &context_.tensors[tensor_index];
   }
 
@@ -250,6 +250,7 @@ class Interpreter {
 
   bool GetProfiling(bool profiling) { return profiling_; };
   void SetProfiling(bool profiling) { profiling_ = profiling; }
+
  private:
   // Give 'op_reg' a chance to initialize itself using the contents of
   // 'buffer'.

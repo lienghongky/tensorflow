@@ -46,7 +46,7 @@ namespace benchmark_tflite_model {
 std::unique_ptr<tflite::FlatBufferModel> model;
 std::unique_ptr<tflite::Interpreter> interpreter;
 
-double get_us(struct timeval t) {return (t.tv_sec * 1000000 + t.tv_usec);}
+double get_us(struct timeval t) { return (t.tv_sec * 1000000 + t.tv_usec); }
 
 void InitImpl(const std::string& graph, const std::vector<int>& sizes,
               const std::string& input_layer_type, int num_threads) {
@@ -58,7 +58,7 @@ void InitImpl(const std::string& graph, const std::vector<int>& sizes,
   }
   LOG(INFO) << "Loaded model " << graph << "\n";
   model->error_reporter();
-  LOG(INFO) << "resolved reporter" << "\n";
+  LOG(INFO) << "resolved reporter\n";
 
 #ifdef TFLITE_CUSTOM_OPS_HEADER
   tflite::MutableOpResolver resolver;
@@ -69,7 +69,7 @@ void InitImpl(const std::string& graph, const std::vector<int>& sizes,
 
   tflite::InterpreterBuilder(*model, resolver)(&interpreter);
   if (!interpreter) {
-    LOG(FATAL) << "Failed to construct interpreter" << "\n";
+    LOG(FATAL) << "Failed to construct interpreter\n";
   }
 
   if (num_threads != -1) {
@@ -83,23 +83,24 @@ void InitImpl(const std::string& graph, const std::vector<int>& sizes,
   }
 
   if (interpreter->AllocateTensors() != kTfLiteOk) {
-    LOG(FATAL) << "Failed to allocate tensors!" << "\n";
+    LOG(FATAL) << "Failed to allocate tensors!\n";
   }
 
   struct timeval t0, t1;
   gettimeofday(&t0, NULL);
   if (interpreter->Invoke() != kTfLiteOk) {
-      LOG(FATAL) << "Failed to invoke tflite!\n";
+    LOG(FATAL) << "Failed to invoke tflite!\n";
   }
   gettimeofday(&t1, NULL);
-  LOG(INFO) << "model run successfully" << "\n";
-  LOG(INFO) << (get_us(t1) - get_us(t0))/1000 << "ms \n";
+  LOG(INFO) << "model run successfully"
+            << "\n";
+  LOG(INFO) << (get_us(t1) - get_us(t0)) / 1000 << "ms \n";
 
   interpreter->SetProfiling(true);
   if (interpreter->Invoke() != kTfLiteOk) {
-      LOG(FATAL) << "Failed to invoke tflite!\n";
+    LOG(FATAL) << "Failed to invoke tflite!\n";
   }
-  LOG(INFO) << "model run successfully" << "\n";
+  LOG(INFO) << "model run successfully\n";
 }
 
 int Main(int argc, char** argv) {
