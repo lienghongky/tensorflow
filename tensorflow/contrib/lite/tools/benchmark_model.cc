@@ -21,6 +21,8 @@ limitations under the License.
 #include <unordered_set>
 #include <vector>
 
+#include <sys/time.h>
+
 #include "tensorflow/contrib/lite/kernels/register.h"
 #include "tensorflow/contrib/lite/model.h"
 #include "tensorflow/contrib/lite/string_util.h"
@@ -43,6 +45,8 @@ namespace benchmark_tflite_model {
 
 std::unique_ptr<tflite::FlatBufferModel> model;
 std::unique_ptr<tflite::Interpreter> interpreter;
+
+double get_us(struct timeval t) {return (t.tv_sec * 1000000 + t.tv_usec);}
 
 void InitImpl(const std::string& graph, const std::vector<int>& sizes,
               const std::string& input_layer_type, int num_threads) {
@@ -82,6 +86,16 @@ void InitImpl(const std::string& graph, const std::vector<int>& sizes,
     LOG(FATAL) << "Failed to allocate tensors!" << "\n";
   }
 
+  struct timeval t0, t1;
+  gettimeofday(&t0, NULL);
+  if (interpreter->Invoke() != kTfLiteOk) {
+      LOG(FATAL) << "Failed to invoke tflite!\n";
+  }
+  gettimeofday(&t1, NULL);
+  LOG(INFO) << "model run successfully" << "\n";
+  LOG(INFO) << (get_us(t1) - get_us(t0))/1000 << "ms \n";
+
+  interpreter->SetProfiling(true);
   if (interpreter->Invoke() != kTfLiteOk) {
       LOG(FATAL) << "Failed to invoke tflite!\n";
   }
@@ -92,7 +106,7 @@ int Main(int argc, char** argv) {
   std::string model_name = "/tmp/mobilenet_quant_v1_224.tflite";
   std::vector<int> sizes = {1, 224, 224, 3};
   std::string layer_type = "int8";
-  int num_threads = 1;
+  int num_threads = 4;
 
   InitImpl(model_name, sizes, layer_type, num_threads);
   return 0;

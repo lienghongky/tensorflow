@@ -22,6 +22,7 @@ limitations under the License.
 #include "tensorflow/contrib/lite/error_reporter.h"
 #include "tensorflow/contrib/lite/kernels/gemm_support.h"
 #include "tensorflow/contrib/lite/nnapi_delegate.h"
+#include "tensorflow/contrib/lite/schema/schema_generated.h"
 
 namespace {
 
@@ -52,6 +53,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   nodes_and_registration_.reserve(kSlotsToReserve);
   next_allocate_node_id_ = 0;
   UseNNAPI(false);
+  SetProfiling(false);
 }
 
 Interpreter::~Interpreter() {
@@ -372,6 +374,8 @@ TfLiteStatus Interpreter::ResizeInputTensor(int tensor_index,
   return ResizeTensorImpl(&context_.tensors[tensor_index], dims_lite);
 }
 
+double get_us(struct timeval t) {return (t.tv_sec * 1000000 + t.tv_usec);}
+
 TfLiteStatus Interpreter::Invoke() {
   if (!consistent_) {
     ReportError(&context_, "Invoke called on model that is not consistent.");
@@ -411,9 +415,24 @@ TfLiteStatus Interpreter::Invoke() {
     }
     TfLiteNode& node = nodes_and_registration_[i].first;
     const TfLiteRegistration& registration = nodes_and_registration_[i].second;
+    if (profiling_) gettimeofday(&node.start_time, NULL);
     if (OpInvoke(registration, &node) == kTfLiteError) {
       status = kTfLiteError;
     }
+    if (profiling_) gettimeofday(&node.stop_time, NULL);
+  }
+  if (profiling_) {
+    double all_time = 0;
+    for (int i = 0; i < nodes_and_registration_.size(); i++) {
+      TfLiteNode& node = nodes_and_registration_[i].first;
+      const TfLiteRegistration& registration = nodes_and_registration_[i].second;
+      all_time +=  (get_us(node.stop_time) - get_us(node.start_time));
+      printf("%010.2f: Node %3d Operator Builtin Code %3d, %s\n", 
+             (get_us(node.stop_time) - get_us(node.start_time)), i, 
+             registration.builtin_code,
+             EnumNameBuiltinOperator((BuiltinOperator)registration.builtin_code));
+    }
+    printf("all time: %10.2f\n", all_time);
   }
   return status;
 }

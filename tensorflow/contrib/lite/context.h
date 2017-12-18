@@ -251,6 +251,9 @@ typedef struct {
 
   // Opaque data provided to the node if the node is a builtin.
   void* builtin_data;
+
+  // simple profiling timestamps
+  struct timeval start_time, stop_time;
 } TfLiteNode;
 
 typedef struct {
