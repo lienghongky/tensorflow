@@ -50,11 +50,11 @@ void InitImpl(const std::string& graph, const std::vector<int>& sizes,
 
   model = tflite::FlatBufferModel::BuildFromFile(graph.c_str());
   if (!model) {
-    LOG(FATAL) << "Failed to mmap model " << graph;
+    LOG(FATAL) << "Failed to mmap model " << graph << "\n";
   }
-  LOG(INFO) << "Loaded model " << graph;
+  LOG(INFO) << "Loaded model " << graph << "\n";
   model->error_reporter();
-  LOG(INFO) << "resolved reporter";
+  LOG(INFO) << "resolved reporter" << "\n";
 
 #ifdef TFLITE_CUSTOM_OPS_HEADER
   tflite::MutableOpResolver resolver;
@@ -65,7 +65,7 @@ void InitImpl(const std::string& graph, const std::vector<int>& sizes,
 
   tflite::InterpreterBuilder(*model, resolver)(&interpreter);
   if (!interpreter) {
-    LOG(FATAL) << "Failed to construct interpreter";
+    LOG(FATAL) << "Failed to construct interpreter" << "\n";
   }
 
   if (num_threads != -1) {
@@ -79,12 +79,22 @@ void InitImpl(const std::string& graph, const std::vector<int>& sizes,
   }
 
   if (interpreter->AllocateTensors() != kTfLiteOk) {
-    LOG(FATAL) << "Failed to allocate tensors!";
+    LOG(FATAL) << "Failed to allocate tensors!" << "\n";
   }
+
+  if (interpreter->Invoke() != kTfLiteOk) {
+      LOG(FATAL) << "Failed to invoke tflite!\n";
+  }
+  LOG(INFO) << "model run successfully" << "\n";
 }
 
 int Main(int argc, char** argv) {
-  InitImpl("", {}, "", 1);
+  std::string model_name = "/tmp/mobilenet_quant_v1_224.tflite";
+  std::vector<int> sizes = {1, 224, 224, 3};
+  std::string layer_type = "int8";
+  int num_threads = 1;
+
+  InitImpl(model_name, sizes, layer_type, num_threads);
   return 0;
 }
 
