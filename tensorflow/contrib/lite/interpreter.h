@@ -20,6 +20,7 @@ limitations under the License.
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
+#include <sys/time.h>
 #include "tensorflow/contrib/lite/allocation.h"
 #include "tensorflow/contrib/lite/context.h"
 #include "tensorflow/contrib/lite/error_reporter.h"
@@ -247,6 +248,8 @@ class Interpreter {
   // Set the number of threads available to the interpreter.
   void SetNumThreads(int num_threads);
 
+  bool GetProfiling(bool profiling) { return profiling_; };
+  void SetProfiling(bool profiling) { profiling_ = profiling; }
  private:
   // Give 'op_reg' a chance to initialize itself using the contents of
   // 'buffer'.
@@ -368,6 +371,9 @@ class Interpreter {
 
   // Whether to delegate to NN API
   std::unique_ptr<NNAPIDelegate> nnapi_delegate_;
+
+  // profling or not
+  bool profiling_;
 };
 
 }  // namespace tflite
