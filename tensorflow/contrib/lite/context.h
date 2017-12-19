@@ -31,6 +31,7 @@ limitations under the License.
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 #ifdef __cplusplus
 extern "C" {

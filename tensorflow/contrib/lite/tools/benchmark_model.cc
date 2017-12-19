@@ -21,6 +21,7 @@ limitations under the License.
 #include <unordered_set>
 #include <vector>
 
+#include <getopt.h>
 #include <sys/time.h>
 
 #include "tensorflow/contrib/lite/kernels/register.h"
@@ -103,12 +104,49 @@ void InitImpl(const std::string& graph, const std::vector<int>& sizes,
   LOG(INFO) << "model run successfully\n";
 }
 
+void display_usage(const char* myname) {
+  LOG(INFO) << myname << "\n"
+            << "--tflite_model, -m: model_name.tflite\n"
+            << "--threads, -t: number of threads\n";
+}
+
 int Main(int argc, char** argv) {
-  std::string model_name = "/tmp/mobilenet_quant_v1_224.tflite";
+  std::string model_name = "/data/local/tmp/mobilenet_quant_v1_224.tflite";
   std::vector<int> sizes = {1, 224, 224, 3};
   std::string layer_type = "int8";
   int num_threads = 4;
 
+  int c;
+  while (1) {
+    static struct option long_options[] = {
+        {"tflite_model", required_argument, 0, 'm'},
+        {"threads", required_argument, 0, 't'},
+        {0, 0, 0, 0}};
+
+    /* getopt_long stores the option index here. */
+    int option_index = 0;
+
+    c = getopt_long(argc, argv, "m:t:", long_options, &option_index);
+
+    /* Detect the end of the options. */
+    if (c == -1) break;
+
+    switch (c) {
+      case 'm':
+        model_name = optarg;
+        break;
+      case 't':
+        num_threads = strtol(optarg, (char**)NULL, 10);
+        break;
+      case 'h':
+      case '?':
+        /* getopt_long already printed an error message. */
+        display_usage(argv[0]);
+        exit(-1);
+      default:
+        exit(-1);
+    }
+  }
   InitImpl(model_name, sizes, layer_type, num_threads);
   return 0;
 }
