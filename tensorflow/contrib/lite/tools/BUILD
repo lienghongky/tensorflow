@@ -11,7 +11,7 @@ tf_cc_binary(
     name = "benchmark_model",
     srcs = [
         "benchmark_model.cc",
-        "mutable_op_resolver.h"
+        "mutable_op_resolver.h",
     ],
     linkopts = tflite_linkopts() + select({
         "//tensorflow:android": [

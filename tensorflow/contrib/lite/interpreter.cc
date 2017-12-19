@@ -374,7 +374,7 @@ TfLiteStatus Interpreter::ResizeInputTensor(int tensor_index,
   return ResizeTensorImpl(&context_.tensors[tensor_index], dims_lite);
 }
 
-double get_us(struct timeval t) {return (t.tv_sec * 1000000 + t.tv_usec);}
+double get_us(struct timeval t) { return (t.tv_sec * 1000000 + t.tv_usec); }
 
 TfLiteStatus Interpreter::Invoke() {
   if (!consistent_) {
@@ -425,12 +425,14 @@ TfLiteStatus Interpreter::Invoke() {
     double all_time = 0;
     for (int i = 0; i < nodes_and_registration_.size(); i++) {
       TfLiteNode& node = nodes_and_registration_[i].first;
-      const TfLiteRegistration& registration = nodes_and_registration_[i].second;
-      all_time +=  (get_us(node.stop_time) - get_us(node.start_time));
-      printf("%010.2f: Node %3d Operator Builtin Code %3d, %s\n", 
-             (get_us(node.stop_time) - get_us(node.start_time)), i, 
-             registration.builtin_code,
-             EnumNameBuiltinOperator((BuiltinOperator)registration.builtin_code));
+      const TfLiteRegistration& registration =
+          nodes_and_registration_[i].second;
+      all_time += (get_us(node.stop_time) - get_us(node.start_time));
+      printf(
+          "%010.2f: Node %3d Operator Builtin Code %3d, %s\n",
+          (get_us(node.stop_time) - get_us(node.start_time)), i,
+          registration.builtin_code,
+          EnumNameBuiltinOperator((BuiltinOperator)registration.builtin_code));
     }
     printf("all time: %10.2f\n", all_time);
   }
