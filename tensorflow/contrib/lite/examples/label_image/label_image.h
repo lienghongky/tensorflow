@@ -32,6 +32,7 @@ struct Settings {
   string labels_file_name = "./labels.txt";
   string input_layer_type = "uint8_t";
   int number_of_threads = 4;
+  int number_of_results = 5;
 };
 
 #endif  // TENSORFLOW_CONTRIB_LITE_EXAMPLES_LABEL_IMAGE_LABEL_IMAGE_H
