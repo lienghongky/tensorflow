@@ -16,8 +16,10 @@ limitations under the License.
 #ifndef TENSORFLOW_CONTRIB_LITE_EXAMPLES_LABEL_IMAGE_LABEL_IMAGE_H
 #define TENSORFLOW_CONTRIB_LITE_EXAMPLES_LABEL_IMAGE_LABEL_IMAGE_H
 
-#include <string>
 #include "tensorflow/contrib/lite/string.h"
+
+namespace tflite {
+namespace label_image {
 
 struct Settings {
   bool verbose = false;
@@ -34,5 +36,8 @@ struct Settings {
   int number_of_threads = 4;
   int number_of_results = 5;
 };
+
+}  // namespace label_image
+}  // namespace tflite
 
 #endif  // TENSORFLOW_CONTRIB_LITE_EXAMPLES_LABEL_IMAGE_LABEL_IMAGE_H
