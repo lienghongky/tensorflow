@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.AbstractMap;
@@ -43,7 +44,8 @@ public class ImageClassifier {
   private static final String TAG = "TfLiteCameraDemo";
 
   /** Name of the model file stored in Assets. */
-  private static final String MODEL_PATH = "mobilenet_quant_v1_224.tflite";
+  // private static final String MODEL_PATH = "mobilenet_quant_v1_224.tflite";
+  private static final String MODEL_PATH = "mobilenet_v1_1.0_224.tflite";
 
   /** Name of the label file stored in Assets. */
   private static final String LABEL_PATH = "labels.txt";
@@ -70,9 +72,11 @@ public class ImageClassifier {
 
   /** A ByteBuffer to hold image data, to be feed into Tensorflow Lite as inputs. */
   private ByteBuffer imgData = null;
+  private float floatData[][][][];
 
   /** An array to hold inference results, to be feed into Tensorflow Lite as outputs. */
-  private byte[][] labelProbArray = null;
+  // private byte[][] labelProbArray = null;
+  private float[][] labelProbArray = null;
   /** multi-stage low pass filter * */
   private float[][] filterLabelProbArray = null;
 
@@ -95,9 +99,11 @@ public class ImageClassifier {
     labelList = loadLabelList(activity);
     imgData =
         ByteBuffer.allocateDirect(
-            DIM_BATCH_SIZE * DIM_IMG_SIZE_X * DIM_IMG_SIZE_Y * DIM_PIXEL_SIZE);
+            DIM_BATCH_SIZE * DIM_IMG_SIZE_X * DIM_IMG_SIZE_Y * DIM_PIXEL_SIZE * 4);
     imgData.order(ByteOrder.nativeOrder());
-    labelProbArray = new byte[1][labelList.size()];
+    // floatData = new float[DIM_BATCH_SIZE][DIM_IMG_SIZE_X][DIM_IMG_SIZE_Y][DIM_PIXEL_SIZE];
+    // labelProbArray = new byte[1][labelList.size()];
+    labelProbArray = new float[1][labelList.size()];
     filterLabelProbArray = new float[FILTER_STAGES][labelList.size()];
     Log.d(TAG, "Created a Tensorflow Lite Image Classifier.");
   }
@@ -108,10 +114,13 @@ public class ImageClassifier {
       Log.e(TAG, "Image classifier has not been initialized; Skipped.");
       return "Uninitialized Classifier.";
     }
-    convertBitmapToByteBuffer(bitmap);
+    // convertBitmapToByteBuffer(bitmap);
+    // convertBitmapToFloatBuffer(bitmap);
     // Here's where the magic happens!!!
     long startTime = SystemClock.uptimeMillis();
+    convertBitmapToFloatBuffer(bitmap);
     tflite.run(imgData, labelProbArray);
+    // tflite.run(floatData, labelProbArray);
     long endTime = SystemClock.uptimeMillis();
     Log.d(TAG, "Timecost to run model inference: " + Long.toString(endTime - startTime));
 
@@ -207,11 +216,38 @@ public class ImageClassifier {
     Log.d(TAG, "Timecost to put values into ByteBuffer: " + Long.toString(endTime - startTime));
   }
 
+  private void convertBitmapToFloatBuffer(Bitmap bitmap) {
+    if (imgData == null) {
+      return;
+    }
+    imgData.rewind();
+    bitmap.getPixels(intValues, 0, bitmap.getWidth(), 0, 0, bitmap.getWidth(), bitmap.getHeight());
+    // Convert the image to floating point.
+    int pixel = 0;
+    long startTime = SystemClock.uptimeMillis();
+    for (int i = 0; i < DIM_IMG_SIZE_X; ++i) {
+      for (int j = 0; j < DIM_IMG_SIZE_Y; ++j) {
+        final int val = intValues[pixel++];
+/*
+        floatData[0][i][j][0] = (float)1.0 * ((val >> 16) & 0xFF);
+        floatData[0][i][j][1] = (float)1.0 * ((val >> 8) & 0xFF);
+        floatData[0][i][j][2] = (float)1.0 * (val & 0xFF);
+*/
+        imgData.putFloat((float) ((((val >> 16) & 0xFF) - 127.5) / 127.5));
+        imgData.putFloat((float) ((((val >> 8) & 0xFF) - 127.5) / 127.5));
+        imgData.putFloat((float) (((val & 0xFF) - 127.5) / 127.5));
+      }
+    }
+    long endTime = SystemClock.uptimeMillis();
+    Log.d(TAG, "Timecost to put values into ByteBuffer: " + Long.toString(endTime - startTime));
+  }
+
   /** Prints top-K labels, to be shown in UI as the results. */
   private String printTopKLabels() {
     for (int i = 0; i < labelList.size(); ++i) {
       sortedLabels.add(
-          new AbstractMap.SimpleEntry<>(labelList.get(i), (labelProbArray[0][i] & 0xff) / 255.0f));
+          new AbstractMap.SimpleEntry<>(labelList.get(i), (labelProbArray[0][i])));
+          // new AbstractMap.SimpleEntry<>(labelList.get(i), (labelProbArray[0][i] & 0xff) / 255.0f));
       if (sortedLabels.size() > RESULTS_TO_SHOW) {
         sortedLabels.poll();
       }
