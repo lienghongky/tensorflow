@@ -1,4 +1,4 @@
-/* Copyright 2017 The TensorFlow Authors. All Rights Reserved.
+/* Copyright 2018 The TensorFlow Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ limitations under the License.
 
 #include "tensorflow/contrib/lite/builtin_op_data.h"
 #include "tensorflow/contrib/lite/kernels/register.h"
-#include "tensorflow/contrib/lite/string_util.h"
 
 #define LOG(x) std::cerr
 
@@ -37,18 +36,10 @@ namespace benchmark_ops {
 
 double get_us(struct timeval t) { return (t.tv_sec * 1000000 + t.tv_usec); }
 
-static double benchmark_conv_tflite(
-    int N,
-    int C,
-    int H,
-    int W,
-    int K,
-    int kernel,
-    int warmup = 5,
-    int run = 10,
-    bool floating = false,
-    bool nnapi = false)
-{
+static double benchmark_conv_tflite(int N, int C, int H, int W, int K,
+                                    int kernel, int warmup = 5, int run = 10,
+                                    bool floating = false, bool nnapi = false,
+                                    bool dwise = false) {
   std::unique_ptr<Interpreter> interpreter(new Interpreter);
 
   int base_index = 0;
@@ -66,49 +57,56 @@ static double benchmark_conv_tflite(
   TfLiteQuantizationParams quant;
 
   if (floating) {
-    interpreter->SetTensorParametersReadWrite(
-      0, kTfLiteFloat32, "input",
-      {N, H, W, C}, quant);
-    interpreter->SetTensorParametersReadWrite(
-      1, kTfLiteFloat32, "filter", 
-      {K, kernel, kernel, C}, quant);
-    interpreter->SetTensorParametersReadWrite(
-      2, kTfLiteFloat32, "bias", 
-      {K}, quant);
-    interpreter->SetTensorParametersReadWrite(
-      3, kTfLiteFloat32, "output",
-      {N, H, W, C}, quant);
+    interpreter->SetTensorParametersReadWrite(0, kTfLiteFloat32, "input",
+                                              {N, H, W, C}, quant);
+    interpreter->SetTensorParametersReadWrite(1, kTfLiteFloat32, "filter",
+                                              {K, kernel, kernel, C}, quant);
+    interpreter->SetTensorParametersReadWrite(2, kTfLiteFloat32, "bias", {K},
+                                              quant);
+    interpreter->SetTensorParametersReadWrite(3, kTfLiteFloat32, "output",
+                                              {N, H, W, C}, quant);
   } else {
     quant.scale = 1.0;
-    interpreter->SetTensorParametersReadWrite(
-      0, kTfLiteUInt8, "input",
-      {N, H, W, C}, quant);
-    interpreter->SetTensorParametersReadWrite(
-      1, kTfLiteUInt8, "filter", 
-      {K, kernel, kernel, C}, quant);
+    interpreter->SetTensorParametersReadWrite(0, kTfLiteUInt8, "input",
+                                              {N, H, W, C}, quant);
+    interpreter->SetTensorParametersReadWrite(1, kTfLiteUInt8, "filter",
+                                              {K, kernel, kernel, C}, quant);
     quant.scale = 1.0;
-    interpreter->SetTensorParametersReadWrite(
-      2, kTfLiteInt32, "bias", 
-      {K}, quant);
+    interpreter->SetTensorParametersReadWrite(2, kTfLiteInt32, "bias", {K},
+                                              quant);
     quant.scale = 100.0;
-    interpreter->SetTensorParametersReadWrite(
-      3, kTfLiteUInt8, "output",
-      {N, H, W, C}, quant);
+    interpreter->SetTensorParametersReadWrite(3, kTfLiteUInt8, "output",
+                                              {N, H, W, C}, quant);
   }
 
   ops::builtin::BuiltinOpResolver resolver;
-	  TfLiteRegistration* conv2d_op =
-      resolver.FindOp(BuiltinOperator_CONV_2D);
-  auto* params = reinterpret_cast<TfLiteConvParams*>(
-      malloc(sizeof(TfLiteConvParams)));
+  TfLiteRegistration* conv2d_op;
+  if (!dwise) {
+    conv2d_op = resolver.FindOp(BuiltinOperator_CONV_2D);
+    auto* params =
+        reinterpret_cast<TfLiteConvParams*>(malloc(sizeof(TfLiteConvParams)));
 
-  params->padding = kTfLitePaddingSame;
-  params->stride_width = 1;
-  params->stride_height = 1;
-  params->activation = kTfLiteActNone;
-  
-  interpreter->AddNodeWithParameters({0, 1, 2}, {3}, nullptr, 0, params,
-                                     conv2d_op, nullptr);
+    params->padding = kTfLitePaddingSame;
+    params->stride_width = 1;
+    params->stride_height = 1;
+    params->activation = kTfLiteActNone;
+
+    interpreter->AddNodeWithParameters({0, 1, 2}, {3}, nullptr, 0, params,
+                                       conv2d_op, nullptr);
+
+  } else {
+    conv2d_op = resolver.FindOp(BuiltinOperator_DEPTHWISE_CONV_2D);
+    auto* params = reinterpret_cast<TfLiteDepthwiseConvParams*>(
+        malloc(sizeof(TfLiteDepthwiseConvParams)));
+
+    params->padding = kTfLitePaddingSame;
+    params->stride_width = 1;
+    params->stride_height = 1;
+    params->depth_multiplier = 1.0;
+    params->activation = kTfLiteActNone;
+    interpreter->AddNodeWithParameters({0, 1, 2}, {3}, nullptr, 0, params,
+                                       conv2d_op, nullptr);
+  }
 
   interpreter->SetNumThreads(4);
   interpreter->UseNNAPI(nnapi);
@@ -116,82 +114,49 @@ static double benchmark_conv_tflite(
 
   struct timeval start, stop;
 
-  for (int i=0; i < warmup; i++)
-    interpreter->Invoke();
+  for (int i = 0; i < warmup; i++) interpreter->Invoke();
 
-  gettimeofday(&start, NULL); 
-  for (int i=0; i < run; i++)
-    interpreter->Invoke();
-  gettimeofday(&stop, NULL); 
+  gettimeofday(&start, NULL);
+  for (int i = 0; i < run; i++) interpreter->Invoke();
+  gettimeofday(&stop, NULL);
   return ((get_us(stop) - get_us(start)) / (run * 1000));
 }
 
-void run_convolutions()
-{
+void run_convolutions() {
   int warmup = 2, mainrun = 10;
-  // float32
+
   for (int space : {14, 26, 52, 104}) {
     for (int input_channel : {64, 128, 256, 512}) {
       for (int kernel : {1, 3}) {
         int output_channel = input_channel;
-        const double cpu_time_int = benchmark_conv_tflite(
-            1,
-            input_channel,
-            space,
-            space,
-            output_channel,
-            kernel,
-            warmup,
-            mainrun);
+        const double cpu_time_int =
+            benchmark_conv_tflite(1, input_channel, space, space,
+                                  output_channel, kernel, warmup, mainrun);
 
         const double cpu_time_float = benchmark_conv_tflite(
-            1,
-            input_channel,
-            space,
-            space,
-            output_channel,
-            kernel,
-            warmup,
+            1, input_channel, space, space, output_channel, kernel, warmup,
             mainrun, true);
 
         const double cpu_time_int_nnapi = benchmark_conv_tflite(
-            1,
-            input_channel,
-            space,
-            space,
-            output_channel,
-            kernel,
-            warmup,
+            1, input_channel, space, space, output_channel, kernel, warmup,
             mainrun, false, true);
 
         const double cpu_time_float_nnapi = benchmark_conv_tflite(
-            1,
-            input_channel,
-            space,
-            space,
-            output_channel,
-            kernel,
-            warmup,
+            1, input_channel, space, space, output_channel, kernel, warmup,
             mainrun, true, true);
 
-       const double flops = double(input_channel) * output_channel * kernel *
-            kernel * (kernel == 1 ? space : space - 2) *
-            (kernel == 1 ? space : space - 2) * 2;
+        const double flops = double(input_channel) * output_channel * kernel *
+                             kernel * (kernel == 1 ? space : space - 2) *
+                             (kernel == 1 ? space : space - 2) * 2;
 
-       printf(
+        printf(
             "Conv: X: %ix%i  \tC: %i -> %i\tK: %ix%i\t"
-            "8b-lite GOPS: %.2f\t"
-            "32b-lite GFLOPS: %.2f\t"
-            "8b-nnapi GOPS: %.2f\t"
-            "32b-nnapi GFLOPS: %.2f\n",
-            space,
-            space,
-            input_channel,
-            output_channel,
-            kernel,
-            kernel,
-            flops / cpu_time_int / 1E6,
-            flops / cpu_time_float / 1E6,
+            "8bTfLite GOPS: %.2f\t"
+            "32bTfLite GFLOPS: %.2f\t"
+            "8bNNAPI GOPS: %.2f\t"
+            "32bNNAPI GFLOPS: %.2f\n",
+            space, space, input_channel, output_channel, kernel, kernel,
+            flops / cpu_time_int / 1E6, flops / cpu_time_float / 1E6,
             flops / cpu_time_int_nnapi / 1E6,
             flops / cpu_time_float_nnapi / 1E6);
       }
@@ -199,8 +164,46 @@ void run_convolutions()
   }
 }
 
-void run_depthwise_separable_convolutions()
-{
+void run_depthwise_separable_convolutions() {
+  int warmup = 2, mainrun = 10;
+
+  for (int space : {14, 26, 52, 104}) {
+    for (int channel : {64, 128, 256, 512}) {
+      for (int kernel : {3}) {
+        const double cpu_time_int =
+            benchmark_conv_tflite(1, channel, space, space, channel, kernel,
+                                  warmup, mainrun, false, false, true);
+
+        const double cpu_time_float =
+            benchmark_conv_tflite(1, channel, space, space, channel, kernel,
+                                  warmup, mainrun, true, false, true);
+
+        const double cpu_time_int_nnapi =
+            benchmark_conv_tflite(1, channel, space, space, channel, kernel,
+                                  warmup, mainrun, false, true, true);
+
+        const double cpu_time_float_nnapi =
+            benchmark_conv_tflite(1, channel, space, space, channel, kernel,
+                                  warmup, mainrun, true, true, true);
+
+        const double dwise_bandwidth =
+            sizeof(float) * double(channel) *
+            (2 * (space - 2) * (space - 2) + kernel * kernel);
+
+        printf(
+            "Conv: X: %ix%i  \tC: %i -> %i\tK: %ix%i\t"
+            "8bTfLitelite Dwise GiB/s: %.2f\t"
+            "32bTfLitelite Dwise GiB/s: %.2f\t"
+            "8bNNAPI Dwise GiB/s: %.2f\t"
+            "32bNNAPI Dwise GiB/s: %.2f\n",
+            space, space, channel, channel, kernel, kernel,
+            dwise_bandwidth / sizeof(float) / cpu_time_int / 1E6,
+            dwise_bandwidth / cpu_time_float / 1E6,
+            dwise_bandwidth / sizeof(float) / cpu_time_int_nnapi / 1E6,
+            dwise_bandwidth / cpu_time_float_nnapi / 1E6);
+      }
+    }
+  }
 }
 
 int Main(int argc, char** argv) {
