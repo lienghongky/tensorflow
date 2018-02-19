@@ -13,17 +13,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
-#include <fstream>
 #include <iostream>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <unordered_set>
-#include <vector>
 
+#include <getopt.h>
 #include <sys/time.h>
 
 #include "tensorflow/contrib/lite/builtin_op_data.h"
@@ -34,10 +28,16 @@ limitations under the License.
 namespace tflite {
 namespace benchmark_ops {
 
+struct Settings {
+  int mainrun = 10;
+  int warmup = 2;
+  int number_of_threads = 4;
+};
+
 double get_us(struct timeval t) { return (t.tv_sec * 1000000 + t.tv_usec); }
 
 static double benchmark_conv_tflite(int N, int C, int H, int W, int K,
-                                    int kernel, int warmup = 5, int run = 10,
+                                    int kernel, Settings* s,
                                     bool floating = false, bool nnapi = false,
                                     bool dwise = false) {
   std::unique_ptr<Interpreter> interpreter(new Interpreter);
@@ -108,42 +108,38 @@ static double benchmark_conv_tflite(int N, int C, int H, int W, int K,
                                        conv2d_op, nullptr);
   }
 
-  interpreter->SetNumThreads(4);
+  interpreter->SetNumThreads(s->number_of_threads);
   interpreter->UseNNAPI(nnapi);
   interpreter->AllocateTensors();
 
   struct timeval start, stop;
 
-  for (int i = 0; i < warmup; i++) interpreter->Invoke();
+  for (int i = 0; i < s->warmup; i++) interpreter->Invoke();
 
   gettimeofday(&start, NULL);
-  for (int i = 0; i < run; i++) interpreter->Invoke();
+  for (int i = 0; i < s->mainrun; i++) interpreter->Invoke();
   gettimeofday(&stop, NULL);
-  return ((get_us(stop) - get_us(start)) / (run * 1000));
+  return ((get_us(stop) - get_us(start)) / (s->mainrun * 1000));
 }
 
-void run_convolutions() {
-  int warmup = 2, mainrun = 10;
-
+void run_convolutions(Settings* s) {
   for (int space : {14, 26, 52, 104}) {
     for (int input_channel : {64, 128, 256, 512}) {
       for (int kernel : {1, 3}) {
         int output_channel = input_channel;
-        const double cpu_time_int =
-            benchmark_conv_tflite(1, input_channel, space, space,
-                                  output_channel, kernel, warmup, mainrun);
+        const double cpu_time_int = benchmark_conv_tflite(
+            1, input_channel, space, space, output_channel, kernel, s);
 
         const double cpu_time_float = benchmark_conv_tflite(
-            1, input_channel, space, space, output_channel, kernel, warmup,
-            mainrun, true);
+            1, input_channel, space, space, output_channel, kernel, s, true);
 
-        const double cpu_time_int_nnapi = benchmark_conv_tflite(
-            1, input_channel, space, space, output_channel, kernel, warmup,
-            mainrun, false, true);
+        const double cpu_time_int_nnapi =
+            benchmark_conv_tflite(1, input_channel, space, space,
+                                  output_channel, kernel, s, false, true);
 
-        const double cpu_time_float_nnapi = benchmark_conv_tflite(
-            1, input_channel, space, space, output_channel, kernel, warmup,
-            mainrun, true, true);
+        const double cpu_time_float_nnapi =
+            benchmark_conv_tflite(1, input_channel, space, space,
+                                  output_channel, kernel, s, true, true);
 
         const double flops = double(input_channel) * output_channel * kernel *
                              kernel * (kernel == 1 ? space : space - 2) *
@@ -164,27 +160,21 @@ void run_convolutions() {
   }
 }
 
-void run_depthwise_separable_convolutions() {
-  int warmup = 2, mainrun = 10;
-
+void run_depthwise_separable_convolutions(Settings* s) {
   for (int space : {14, 26, 52, 104}) {
     for (int channel : {64, 128, 256, 512}) {
       for (int kernel : {3}) {
-        const double cpu_time_int =
-            benchmark_conv_tflite(1, channel, space, space, channel, kernel,
-                                  warmup, mainrun, false, false, true);
+        const double cpu_time_int = benchmark_conv_tflite(
+            1, channel, space, space, channel, kernel, s, false, false, true);
 
-        const double cpu_time_float =
-            benchmark_conv_tflite(1, channel, space, space, channel, kernel,
-                                  warmup, mainrun, true, false, true);
+        const double cpu_time_float = benchmark_conv_tflite(
+            1, channel, space, space, channel, kernel, s, true, false, true);
 
-        const double cpu_time_int_nnapi =
-            benchmark_conv_tflite(1, channel, space, space, channel, kernel,
-                                  warmup, mainrun, false, true, true);
+        const double cpu_time_int_nnapi = benchmark_conv_tflite(
+            1, channel, space, space, channel, kernel, s, false, true, true);
 
-        const double cpu_time_float_nnapi =
-            benchmark_conv_tflite(1, channel, space, space, channel, kernel,
-                                  warmup, mainrun, true, true, true);
+        const double cpu_time_float_nnapi = benchmark_conv_tflite(
+            1, channel, space, space, channel, kernel, s, true, true, true);
 
         const double dwise_bandwidth =
             sizeof(float) * double(channel) *
@@ -206,9 +196,53 @@ void run_depthwise_separable_convolutions() {
   }
 }
 
+void display_usage() {
+  LOG(INFO) << "benchmark_ops\n"
+            << "--mainrun, -r: number of main runs\n"
+            << "--warmup, -w: number of warmup runs\n"
+            << "--threads, -t: number of threads\n"
+            << "\n";
+}
+
 int Main(int argc, char** argv) {
-  run_convolutions();
-  run_depthwise_separable_convolutions();
+  Settings s;
+
+  int c;
+  while (1) {
+    static struct option long_options[] = {
+        {"mainrun", required_argument, 0, 'r'},
+        {"threads", required_argument, 0, 't'},
+        {"warmup", required_argument, 0, 'w'},
+        {0, 0, 0, 0}};
+
+    /* getopt_long stores the option index here. */
+    int option_index = 0;
+
+    c = getopt_long(argc, argv, "r:t:w:", long_options, &option_index);
+
+    /* Detect the end of the options. */
+    if (c == -1) break;
+
+    switch (c) {
+      case 'r':
+        s.mainrun = atoi(optarg);
+        break;
+      case 't':
+        s.number_of_threads = atoi(optarg);
+        break;
+      case 'w':
+        s.warmup = atoi(optarg);
+        break;
+      case 'h':
+      case '?':
+        display_usage();
+        exit(-1);
+      default:
+        exit(-1);
+    }
+  }
+  run_convolutions(&s);
+  run_depthwise_separable_convolutions(&s);
   return 0;
 }
 
