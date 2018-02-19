@@ -320,7 +320,8 @@ public class Camera2BasicFragment extends Fragment
     super.onActivityCreated(savedInstanceState);
     try {
       // create either a new ImageClassifierQuantizedMobileNet or an ImageClassifierFloatInception
-      classifier = new ImageClassifierQuantizedMobileNet(getActivity());
+      // classifier = new ImageClassifierQuantizedMobileNet(getActivity());
+      classifier = new ImageClassifierFloatMobileNet(getActivity());
     } catch (IOException e) {
       Log.e(TAG, "Failed to initialize an image classifier.");
     }

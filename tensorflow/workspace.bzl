@@ -730,6 +730,16 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
   )
 
   tf_http_archive(
+      name = "tflite_mobilenet_float",
+      sha256 = "dda85bc61079a59f8cdcbe7aeed05b081ca242229194850c8859a0f1bce508fe",
+      urls = [
+          "https://mirror.bazel.build/storage.googleapis.com/download.tensorflow.org/models/tflite/mobilenet_v1_224_1.0_224_float_2017_11_08.zip",
+          "https://storage.googleapis.com/download.tensorflow.org/models/tflite/mobilenet_v1_1.0_224_float_2017_11_08.zip",
+      ],
+      build_file = str(Label("//third_party:tflite_mobilenet_float.BUILD")),
+  )
+
+  tf_http_archive(
       name = "tflite_smartreply",
       sha256 = "8980151b85a87a9c1a3bb1ed4748119e4a85abd3cb5744d83da4d4bd0fbeef7c",
       urls = [
