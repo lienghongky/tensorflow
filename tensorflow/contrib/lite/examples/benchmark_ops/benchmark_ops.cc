@@ -29,6 +29,7 @@ namespace tflite {
 namespace benchmark_ops {
 
 struct Settings {
+  bool profiling = false;
   int mainrun = 10;
   int warmup = 2;
   int number_of_threads = 4;
@@ -126,6 +127,7 @@ static double benchmark_conv_tflite(int N, int C, int H, int W, int K,
                                        conv2d_op, nullptr);
   }
 
+  interpreter->SetProfiling(s->profiling);
   interpreter->SetNumThreads(s->number_of_threads);
   interpreter->UseNNAPI(nnapi);
   interpreter->AllocateTensors();
@@ -216,6 +218,7 @@ void run_depthwise_separable_convolutions(Settings* s) {
 
 void display_usage() {
   LOG(INFO) << "benchmark_ops\n"
+            << "--profiling, -p: profiling\n"
             << "--mainrun, -r: number of main runs\n"
             << "--warmup, -w: number of warmup runs\n"
             << "--threads, -t: number of threads\n"
@@ -228,6 +231,7 @@ int Main(int argc, char** argv) {
   int c;
   while (1) {
     static struct option long_options[] = {
+        {"profiling", required_argument, 0, 'p'},
         {"mainrun", required_argument, 0, 'r'},
         {"threads", required_argument, 0, 't'},
         {"warmup", required_argument, 0, 'w'},
@@ -236,12 +240,15 @@ int Main(int argc, char** argv) {
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    c = getopt_long(argc, argv, "r:t:w:", long_options, &option_index);
+    c = getopt_long(argc, argv, "p:r:t:w:", long_options, &option_index);
 
     /* Detect the end of the options. */
     if (c == -1) break;
 
     switch (c) {
+      case 'p':
+        s.profiling = atoi(optarg);
+        break;
       case 'r':
         s.mainrun = atoi(optarg);
         break;
