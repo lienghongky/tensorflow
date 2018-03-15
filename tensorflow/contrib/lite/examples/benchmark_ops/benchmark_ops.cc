@@ -50,7 +50,11 @@ static double benchmark_conv_tflite(int N, int C, int H, int W, int K,
   interpreter->AddTensors(1, &base_index);
 
   // set input and output tensors
-  interpreter->SetInputs({0, 1, 2});
+  if (nnapi && floating)
+    interpreter->SetInputs({0});
+  else
+    interpreter->SetInputs({0, 1, 2});
+
   interpreter->SetOutputs({3});
 
   // set parameters of tensors
@@ -59,10 +63,24 @@ static double benchmark_conv_tflite(int N, int C, int H, int W, int K,
   if (floating) {
     interpreter->SetTensorParametersReadWrite(0, kTfLiteFloat32, "input",
                                               {N, H, W, C}, quant);
-    interpreter->SetTensorParametersReadWrite(1, kTfLiteFloat32, "filter",
-                                              {K, kernel, kernel, C}, quant);
-    interpreter->SetTensorParametersReadWrite(2, kTfLiteFloat32, "bias", {K},
-                                              quant);
+    if (!nnapi)
+      interpreter->SetTensorParametersReadWrite(1, kTfLiteFloat32, "filter",
+                                                {K, kernel, kernel, C}, quant);
+    else {
+      float* f = new float[K * kernel * kernel * C]();
+      interpreter->SetTensorParametersReadOnly(
+          1, kTfLiteFloat32, "filter", {K, kernel, kernel, C}, quant, (char*)f,
+          K * kernel * kernel * C * 4);
+    }
+
+    if (!nnapi)
+      interpreter->SetTensorParametersReadWrite(2, kTfLiteFloat32, "bias", {K},
+                                                quant);
+    else {
+      float* g = new float[K]();
+      interpreter->SetTensorParametersReadOnly(2, kTfLiteFloat32, "bias", {K},
+                                               quant, (char*)g, K * 4);
+    }
     interpreter->SetTensorParametersReadWrite(3, kTfLiteFloat32, "output",
                                               {N, H, W, C}, quant);
   } else {
