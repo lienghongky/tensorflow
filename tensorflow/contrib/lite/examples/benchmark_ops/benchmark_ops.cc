@@ -29,6 +29,7 @@ namespace tflite {
 namespace benchmark_ops {
 
 struct Settings {
+  bool flops = false;
   bool profiling = false;
   int mainrun = 10;
   int warmup = 2;
@@ -164,17 +165,27 @@ void run_convolutions(Settings* s) {
         const double flops = double(input_channel) * output_channel * kernel *
                              kernel * (kernel == 1 ? space : space - 2) *
                              (kernel == 1 ? space : space - 2) * 2;
-
-        printf(
-            "Conv: X: %ix%i  \tC: %i -> %i\tK: %ix%i\t"
-            "8bTfLite GOPS: %.2f\t"
-            "32bTfLite GFLOPS: %.2f\t"
-            "8bNNAPI GOPS: %.2f\t"
-            "32bNNAPI GFLOPS: %.2f\n",
-            space, space, input_channel, output_channel, kernel, kernel,
-            flops / cpu_time_int / 1E6, flops / cpu_time_float / 1E6,
-            flops / cpu_time_int_nnapi / 1E6,
-            flops / cpu_time_float_nnapi / 1E6);
+        if (s->flops) {
+          printf(
+              "Conv: X: %ix%i  \tC: %i -> %i\tK: %ix%i\t"
+              "8bTfLite GOPS: %.2f\t"
+              "32bTfLite GFLOPS: %.2f\t"
+              "8bNNAPI GOPS: %.2f\t"
+              "32bNNAPI GFLOPS: %.2f\n",
+              space, space, input_channel, output_channel, kernel, kernel,
+              flops / cpu_time_int / 1E6, flops / cpu_time_float / 1E6,
+              flops / cpu_time_int_nnapi / 1E6,
+              flops / cpu_time_float_nnapi / 1E6);
+        } else
+          printf(
+              "Conv: X: %ix%i  \tC: %i -> %i\tK: %ix%i\t"
+              "8bTfLite time: %.2f\t"
+              "32bTfLite time: %.2f\t"
+              "8bNNAPI time: %.2f\t"
+              "32bNNAPI time: %.2f\n",
+              space, space, input_channel, output_channel, kernel, kernel,
+              cpu_time_int, cpu_time_float, cpu_time_int_nnapi,
+              cpu_time_float_nnapi);
       }
     }
   }
@@ -200,17 +211,28 @@ void run_depthwise_separable_convolutions(Settings* s) {
             sizeof(float) * double(channel) *
             (2 * (space - 2) * (space - 2) + kernel * kernel);
 
-        printf(
-            "Conv: X: %ix%i  \tC: %i -> %i\tK: %ix%i\t"
-            "8bTfLitelite Dwise GiB/s: %.2f\t"
-            "32bTfLitelite Dwise GiB/s: %.2f\t"
-            "8bNNAPI Dwise GiB/s: %.2f\t"
-            "32bNNAPI Dwise GiB/s: %.2f\n",
-            space, space, channel, channel, kernel, kernel,
-            dwise_bandwidth / sizeof(float) / cpu_time_int / 1E6,
-            dwise_bandwidth / cpu_time_float / 1E6,
-            dwise_bandwidth / sizeof(float) / cpu_time_int_nnapi / 1E6,
-            dwise_bandwidth / cpu_time_float_nnapi / 1E6);
+        if (s->flops) {
+          printf(
+              "Conv: X: %ix%i  \tC: %i -> %i\tK: %ix%i\t"
+              "8bTfLite Dwise GiB/s: %.2f\t"
+              "32bTfLite Dwise GiB/s: %.2f\t"
+              "8bNNAPI Dwise GiB/s: %.2f\t"
+              "32bNNAPI Dwise GiB/s: %.2f\n",
+              space, space, channel, channel, kernel, kernel,
+              dwise_bandwidth / sizeof(float) / cpu_time_int / 1E6,
+              dwise_bandwidth / cpu_time_float / 1E6,
+              dwise_bandwidth / sizeof(float) / cpu_time_int_nnapi / 1E6,
+              dwise_bandwidth / cpu_time_float_nnapi / 1E6);
+        } else {
+          printf(
+              "Conv: X: %ix%i  \tC: %i -> %i\tK: %ix%i\t"
+              "8bTfLite Dwise time: %.2f\t"
+              "32bTfLite Dwise time: %.2f\t"
+              "8bNNAPI Dwise time: %.2f\t"
+              "32bNNAPI Dwise time: %.2f\n",
+              space, space, channel, channel, kernel, kernel, cpu_time_int,
+              cpu_time_float, cpu_time_int_nnapi, cpu_time_float_nnapi);
+        }
       }
     }
   }
@@ -218,6 +240,7 @@ void run_depthwise_separable_convolutions(Settings* s) {
 
 void display_usage() {
   LOG(INFO) << "benchmark_ops\n"
+            << "--flops, -f: flops\n"
             << "--profiling, -p: profiling\n"
             << "--mainrun, -r: number of main runs\n"
             << "--warmup, -w: number of warmup runs\n"
@@ -231,6 +254,7 @@ int Main(int argc, char** argv) {
   int c;
   while (1) {
     static struct option long_options[] = {
+        {"flops", required_argument, 0, 'f'},
         {"profiling", required_argument, 0, 'p'},
         {"mainrun", required_argument, 0, 'r'},
         {"threads", required_argument, 0, 't'},
@@ -240,12 +264,15 @@ int Main(int argc, char** argv) {
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    c = getopt_long(argc, argv, "p:r:t:w:", long_options, &option_index);
+    c = getopt_long(argc, argv, "f:p:r:t:w:", long_options, &option_index);
 
     /* Detect the end of the options. */
     if (c == -1) break;
 
     switch (c) {
+      case 'f':
+        s.flops = atoi(optarg);
+        break;
       case 'p':
         s.profiling = atoi(optarg);
         break;
