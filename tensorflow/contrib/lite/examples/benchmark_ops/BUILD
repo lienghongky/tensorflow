@@ -27,6 +27,25 @@ tf_cc_binary(
     ],
 )
 
+tf_cc_binary(
+    name = "benchmark_single_op",
+    srcs = [
+        "benchmark_single_op.cc",
+    ],
+    linkopts = tflite_linkopts() + select({
+        "//tensorflow:android": [
+            "-pie",  # Android 5.0 and later supports only PIE
+            "-lm",  # some builtin ops, e.g., tanh, need -lm
+        ],
+        "//conditions:default": [],
+    }),
+    deps = [
+        "//tensorflow/contrib/lite:framework",
+        "//tensorflow/contrib/lite:string_util",
+        "//tensorflow/contrib/lite/kernels:builtin_ops",
+    ],
+)
+
 filegroup(
     name = "all_files",
     srcs = glob(
