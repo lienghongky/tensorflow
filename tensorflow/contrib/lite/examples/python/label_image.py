@@ -66,19 +66,17 @@ if __name__ == "__main__":
   input_details = interpreter.get_input_details()
   output_details = interpreter.get_output_details()
 
+  # check the type of the input tensor
   if (input_details[0]['dtype'] == type(np.float32(1.0))):
     floating_model = True
-    print(input_details[0]['dtype'] == type(np.float32(1.0)))
 
-  #print(input_details)
-  #print(output_details)
-
+  # NxHxWxC, H:1, W:2
   height = input_details[0]['shape'][1]
   width = input_details[0]['shape'][2]
-  #print(height, width)
   img = Image.open(file_name)
   img = img.resize((width, height))
 
+  # add N dim
   input_data = np.expand_dims(img, axis=0)
 
   if (floating_model):
@@ -89,14 +87,12 @@ if __name__ == "__main__":
   interpreter.invoke()
 
   output_data = interpreter.get_tensor(output_details[0]['index'])
-
   results = np.squeeze(output_data)
 
   top_k = results.argsort()[-5:][::-1]
   labels = load_labels(label_file)
   for i in top_k:
     if (floating_model):
-      print(labels[i]+":", results[i])
+      print('{0:08.6f}'.format(float(results[i]))+":", labels[i])
     else:
-      print(labels[i]+":", results[i]/255.0)
-
+      print('{0:08.6f}'.format(float(results[i]/255.0))+":", labels[i])
