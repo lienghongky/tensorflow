@@ -166,7 +166,7 @@ if __name__ == "__main__":
   for e in ten:
     print(e[0], e[2], e[3])
     f_rect = e[3]
-    rect = patches.Rectangle((f_rect[0], f_rect[1]), f_rect[2], f_rect[3],linewidth=1, edgecolor='r', facecolor='none')
+    rect = patches.Rectangle((f_rect[0], f_rect[1]), f_rect[2] - f_rect[0], f_rect[3] - f_rect[1], linewidth=1, edgecolor='r', facecolor='none')
 
     if show_image:
       # Add the patch to the Axes
