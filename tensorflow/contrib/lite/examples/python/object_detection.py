@@ -22,6 +22,7 @@ import argparse
 import math
 from heapq import heappush, heappop, nlargest
 import numpy as np
+import time
 
 from PIL import Image
 import matplotlib.pyplot as plt
@@ -133,7 +134,10 @@ if __name__ == "__main__":
 
   interpreter.set_tensor(input_details[0]['index'], input_data)
 
+  start_time = time.time()
   interpreter.invoke()
+  finish_time = time.time()
+  print("time:",  (finish_time - start_time) * 1000)
 
   #output_data = interpreter.get_tensor(output_details[0]['index'])
 
@@ -164,13 +168,15 @@ if __name__ == "__main__":
 
   ten = nlargest(10, heap)
   for e in ten:
-    print(e[0], e[2], e[3])
-    f_rect = e[3]
-    rect = patches.Rectangle((f_rect[0], f_rect[1]), f_rect[2] - f_rect[0], f_rect[3] - f_rect[1], linewidth=1, edgecolor='r', facecolor='none')
+    score = '{0:2.0f}%'.format(100. / (1. + math.exp(-e[0])))
+    print(score, e[2], e[3])
+    left, top, right, bottom = e[3]
+    rect = patches.Rectangle((left, top), (right - left), (bottom - top), linewidth=1, edgecolor='r', facecolor='none')
 
     if show_image:
       # Add the patch to the Axes
       ax.add_patch(rect)
+      ax.text(left, top, e[2]+': '+score, fontsize=6, bbox=dict(facecolor='y', edgecolor='y', alpha=0.5))
 
   if show_image:
     ax.imshow(img)
