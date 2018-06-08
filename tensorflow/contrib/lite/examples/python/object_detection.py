@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""label_image for tflite"""
+"""objection_detection for tflite"""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -20,10 +20,10 @@ from __future__ import print_function
 
 import argparse
 import math
-from heapq import heappush, heappop, nlargest
-import numpy as np
 import time
+from heapq import heappush, nlargest
 
+import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -38,14 +38,13 @@ Y_SCALE = 10.0
 H_SCALE = 5.0
 W_SCALE = 5.0
 
-
 def load_box_priors(filename):
   with open(filename) as f:
     count = 0
     for line in f:
       row = line.strip().split(' ')
-      boxPriors.append(row)
-      #print(boxPriors[count][0])
+      box_priors.append(row)
+      #print(box_priors[count][0])
       count = count + 1
       if count == 4:
         return
@@ -60,20 +59,22 @@ def load_labels(filename):
 def decode_center_size_boxes(locations):
   """calculate real sizes of boxes"""
   for i in range(0, NUM_RESULTS):
-    ycenter = locations[0][i][0] / Y_SCALE  * np.float(boxPriors[2][i]) + np.float(boxPriors[0][i])
-    xcenter = locations[0][i][1] / X_SCALE  * np.float(boxPriors[3][i]) + np.float(boxPriors[1][i])
-    h = math.exp(locations[0][i][2] / H_SCALE) * np.float(boxPriors[2][i])
-    w = math.exp(locations[0][i][3] / W_SCALE) * np.float(boxPriors[3][i])
+    ycenter = locations[i][0] / Y_SCALE * np.float(box_priors[2][i]) \
+            + np.float(box_priors[0][i])
+    xcenter = locations[i][1] / X_SCALE * np.float(box_priors[3][i]) \
+            + np.float(box_priors[1][i])
+    h = math.exp(locations[i][2] / H_SCALE) * np.float(box_priors[2][i])
+    w = math.exp(locations[i][3] / W_SCALE) * np.float(box_priors[3][i])
 
     ymin = ycenter - h / 2.0
     xmin = xcenter - w / 2.0
     ymax = ycenter + h / 2.0
     xmax = xcenter + w / 2.0
 
-    locations[0][i][0] = ymin
-    locations[0][i][1] = xmin
-    locations[0][i][2] = ymax
-    locations[0][i][3] = xmax
+    locations[i][0] = ymin
+    locations[i][1] = xmin
+    locations[i][2] = ymax
+    locations[i][3] = xmax
   return locations
 
 if __name__ == "__main__":
@@ -137,32 +138,33 @@ if __name__ == "__main__":
   start_time = time.time()
   interpreter.invoke()
   finish_time = time.time()
-  print("time:",  (finish_time - start_time) * 1000)
+  print("time spent:", ((finish_time - start_time) * 1000))
 
-  #output_data = interpreter.get_tensor(output_details[0]['index'])
-
-  boxPriors = []
+  box_priors = []
   load_box_priors(box_prior_file)
   labels = load_labels(label_file)
-  predictions = interpreter.get_tensor(output_details[0]['index'])
-  output_classes = interpreter.get_tensor(output_details[1]['index'])
+  predictions = np.squeeze(interpreter.get_tensor(output_details[0]['index']))
+  output_classes = np.squeeze( \
+                     interpreter.get_tensor(output_details[1]['index']))
 
   decode_center_size_boxes(predictions)
 
   heap = []
-  for i in range(0, NUM_RESULTS):
+  for r in range(0, NUM_RESULTS):
     top_class_score = -1000.0
     top_class_score_index = -1
 
-    for j in range(1, NUM_CLASSES):
-      score = 1. / (1. + math.exp(-output_classes[0][i][j]))
+    for c in range(1, NUM_CLASSES):
+      score = 1. / (1. + math.exp(-output_classes[r][c]))
       if score > top_class_score:
-        top_class_score_inxdex = j
+        top_class_score_inxdex = c
         top_class_score = score
 
     if top_class_score > 0.001:
-      rect = (predictions[0][i][1] * width, predictions[0][i][0] * width, predictions[0][i][3] * width, predictions[0][i][2] * width)
-      heappush(heap, (output_classes[0][i][top_class_score_inxdex], i, labels[top_class_score_inxdex], rect))
+      rect = (predictions[r][1] * width, predictions[r][0] * width, \
+              predictions[r][3] * width, predictions[r][2] * width)
+      heappush(heap, (output_classes[r][top_class_score_inxdex], r, \
+                      labels[top_class_score_inxdex], rect))
 
   fig, ax = plt.subplots(1)
 
@@ -171,12 +173,14 @@ if __name__ == "__main__":
     score = '{0:2.0f}%'.format(100. / (1. + math.exp(-e[0])))
     print(score, e[2], e[3])
     left, top, right, bottom = e[3]
-    rect = patches.Rectangle((left, top), (right - left), (bottom - top), linewidth=1, edgecolor='r', facecolor='none')
+    rect = patches.Rectangle((left, top), (right - left), (bottom - top), \
+             linewidth=1, edgecolor='r', facecolor='none')
 
     if show_image:
       # Add the patch to the Axes
       ax.add_patch(rect)
-      ax.text(left, top, e[2]+': '+score, fontsize=6, bbox=dict(facecolor='y', edgecolor='y', alpha=0.5))
+      ax.text(left, top, e[2]+': '+score, fontsize=6,
+              bbox=dict(facecolor='y', edgecolor='y', alpha=0.5))
 
   if show_image:
     ax.imshow(img)
