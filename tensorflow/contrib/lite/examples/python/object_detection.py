@@ -143,9 +143,16 @@ if __name__ == "__main__":
   box_priors = []
   load_box_priors(box_prior_file)
   labels = load_labels(label_file)
-  predictions = np.squeeze(interpreter.get_tensor(output_details[0]['index']))
+
+  predictions = np.squeeze(interpreter.get_tensor(output_details[1]['index']))
   output_classes = np.squeeze( \
-                     interpreter.get_tensor(output_details[1]['index']))
+                     interpreter.get_tensor(output_details[0]['index']))
+  if not floating_model:
+    p_scale, p_mean = output_details[1]['quantization']
+    o_scale, o_mean = output_details[0]['quantization']
+
+    predictions = (predictions - p_mean * 1.0) * p_scale
+    output_classes = (output_classes - o_mean * 1.0) * o_scale
 
   decode_center_size_boxes(predictions)
 
@@ -184,4 +191,5 @@ if __name__ == "__main__":
 
   if show_image:
     ax.imshow(img)
+    plt.title(model_file)
     plt.show()
