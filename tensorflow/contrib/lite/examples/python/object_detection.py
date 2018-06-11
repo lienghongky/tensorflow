@@ -86,6 +86,7 @@ if __name__ == "__main__":
   input_std = 127.5
   floating_model = False
   show_image = False
+  alt_output_order = False
 
   parser = argparse.ArgumentParser()
   parser.add_argument("--image", help="image to be classified")
@@ -94,6 +95,7 @@ if __name__ == "__main__":
   parser.add_argument("--input_mean", help="input_mean")
   parser.add_argument("--input_std", help="input standard deviation")
   parser.add_argument("--show_image", help="show_image")
+  parser.add_argument("--alt_output_order", help="alternative output index")
   args = parser.parse_args()
 
   if args.graph:
@@ -108,6 +110,8 @@ if __name__ == "__main__":
     input_std = args.input_std
   if args.show_image:
     show_image = args.show_image
+  if args.alt_output_order:
+    alt_output_order = args.alt_output_order
 
   interpreter = interpreter_wrapper.Interpreter(model_path=model_file)
   interpreter.allocate_tensors()
@@ -144,9 +148,16 @@ if __name__ == "__main__":
   load_box_priors(box_prior_file)
   labels = load_labels(label_file)
 
-  predictions = np.squeeze(interpreter.get_tensor(output_details[1]['index']))
+  p_index = 0
+  o_index = 1
+  if alt_output_order:
+    p_index = 1
+    o_index = 0
+
+  predictions = np.squeeze( \
+                  interpreter.get_tensor(output_details[p_index]['index']))
   output_classes = np.squeeze( \
-                     interpreter.get_tensor(output_details[0]['index']))
+                     interpreter.get_tensor(output_details[o_index]['index']))
   if not floating_model:
     p_scale, p_mean = output_details[1]['quantization']
     o_scale, o_mean = output_details[0]['quantization']
