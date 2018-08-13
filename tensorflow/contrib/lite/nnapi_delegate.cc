@@ -22,6 +22,7 @@ limitations under the License.
 #include "tensorflow/contrib/lite/error_reporter.h"
 #include "tensorflow/contrib/lite/model.h"
 #include "tensorflow/contrib/lite/nnapi/NeuralNetworksShim.h"
+#include "tensorflow/contrib/lite/profiling/profiler.h"
 
 #ifdef __ANDROID__
 #include <sys/system_properties.h>
@@ -738,9 +739,13 @@ TfLiteStatus NNAPIDelegate::Invoke(Interpreter* interpreter) {
     return model_status_;
   }
 
+  auto profiler = interpreter->GetProfiler();
+  tflite::profiling::ScopedProfile *t1 = new tflite::profiling::ScopedProfile(profiler, "NNAPI Create");
   ANeuralNetworksExecution* execution = nullptr;
   CHECK_NN(ANeuralNetworksExecution_create(nn_compiled_model_, &execution));
+  delete t1;
 
+  tflite::profiling::ScopedProfile *t2 = new tflite::profiling::ScopedProfile(profiler, "NNAPI Data Preparation");
   // Currently perform deep copy of input buffer
   for (size_t i = 0; i < interpreter->inputs().size(); i++) {
     int input = interpreter->inputs()[i];
@@ -775,13 +780,16 @@ TfLiteStatus NNAPIDelegate::Invoke(Interpreter* interpreter) {
         execution, i + interpreter->outputs().size(), nullptr, tensor->data.raw,
         tensor->bytes));
   }
+  delete t2;
 
+  tflite::profiling::ScopedProfile *t3 = new tflite::profiling::ScopedProfile(profiler, "NNAPI Compute");
   // Currently use blocking compute.
   ANeuralNetworksEvent* event = nullptr;
   CHECK_NN(ANeuralNetworksExecution_startCompute(execution, &event));
   CHECK_NN(ANeuralNetworksEvent_wait(event));
   ANeuralNetworksEvent_free(event);
   ANeuralNetworksExecution_free(execution);
+  delete t3;
 
 #if 0
   printf("From the NN API:\n");

@@ -73,18 +73,26 @@ TfLiteStatus ReadLabelsFile(const string& file_name,
 
 void PrintProfilingInfo(const profiling::ProfileEvent* e, uint32_t op_index,
                         TfLiteRegistration registration) {
-  // output something like
-  // time (ms) , Node xxx, OpCode xxx, symblic name
-  //      5.352, Node   5, OpCode   4, DEPTHWISE_CONV_2D
 
-  LOG(INFO) << std::fixed << std::setw(10) << std::setprecision(3)
-            << (e->end_timestamp_us - e->begin_timestamp_us) / 1000.0
-            << ", Node " << std::setw(3) << std::setprecision(3) << op_index
-            << ", OpCode " << std::setw(3) << std::setprecision(3)
-            << registration.builtin_code << ", "
-            << EnumNameBuiltinOperator(
-                   static_cast<BuiltinOperator>(registration.builtin_code))
-            << "\n";
+  if (e->event_type == profiling::ProfileEvent::EventType::OPERATOR_INVOKE_EVENT) {
+    // output something like
+    // time (ms) , Node xxx, OpCode xxx, symblic name
+    //      5.352, Node   5, OpCode   4, DEPTHWISE_CONV_2D
+
+    LOG(INFO) << std::fixed << std::setw(10) << std::setprecision(3)
+              << (e->end_timestamp_us - e->begin_timestamp_us) / 1000.0
+              << ", Node " << std::setw(3) << std::setprecision(3) << op_index
+              << ", OpCode " << std::setw(3) << std::setprecision(3)
+              << registration.builtin_code << ", "
+              << EnumNameBuiltinOperator(
+                     static_cast<BuiltinOperator>(registration.builtin_code))
+              << "\n";
+  } else {
+    LOG(INFO) << std::fixed << std::setw(10) << std::setprecision(3)
+              << (e->end_timestamp_us - e->begin_timestamp_us) / 1000.0
+              << ", " << e->tag
+              << "\n";
+  }
 }
 
 void RunInference(Settings* s) {
