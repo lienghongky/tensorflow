@@ -1,0 +1,13 @@
+feed {
+  id { node_name: "input" }
+  shape {
+    dim { size: 1 }
+    dim { size: 224 }
+    dim { size: 224 }
+    dim { size: 3 }
+  }
+}
+
+fetch {
+  id { node_name: "MobilenetV1/Predictions/Reshape_1" }
+}
