@@ -203,6 +203,28 @@ tf_library(
     ],
 )
 
+tf_library(
+    name = "test_graph_mobilenetv1",
+    cpp_class = "foobar::MobilenetV1",
+    graph = "mobilenet_v1_1.0_224_frozen.pb",
+    config = "mobilenetv1.pbtxt",
+    tfcompile_flags = "--target_cpu=x86-64 --target_features=+sse4.1 --target_features=+sse4.2 --target_features=+avx --target_features=+avx2 --target_features=+fma --xla_cpu_enable_fast_math",
+)
+
+cc_binary(
+    name = "my_mobilenetv1",
+    srcs = [
+        "my_mobilenetv1.cc",
+    ],
+    deps = [
+        ":test_graph_mobilenetv1",  # link in the generated object file
+        "//third_party/eigen3",
+    ],
+    linkopts = [
+          "-lpthread",
+    ]
+)
+
 tf_cc_test(
     name = "tfcompile_test",
     srcs = ["tfcompile_test.cc"],
