@@ -1,0 +1,13 @@
+feed {
+  id { node_name: "input" }
+  shape {
+    dim { size: 1 }
+    dim { size: 299 }
+    dim { size: 299 }
+    dim { size: 3 }
+  }
+}
+
+fetch {
+  id { node_name: "resnet_v2_50/predictions/Reshape_1" }
+}
