@@ -6,9 +6,11 @@
 #define EIGEN_USE_THREADS
 #define EIGEN_USE_CUSTOM_THREAD_POOL
 
+#include "tensorflow/compiler/aot/benchmark.h"
 #include "tensorflow/compiler/aot/tests/test_graph_mobilenetv1.h"
 
 using namespace std;
+using namespace tensorflow::tfcompile;
 
 void get_file_to_float(string fn, float bmp_float[][224][3])
 {
@@ -39,12 +41,9 @@ int main(int argc, char *argv[])
 
   mobilenetv1.set_arg0_data(bmp_float);
 
-  int64_t start, stop;
-  start  = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  benchmark::Options options;
+  benchmark::Stats stats;
+  benchmark::Benchmark(options, [&] { mobilenetv1.Run(); }, &stats);
+  benchmark::DumpStatsToStdout(stats);
 
-  for (int i=0; i < 100; i++)
-    mobilenetv1.Run();
-  stop  = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
-  cout << "time diff: " << (stop - start)/100 << " (ms)\n";
 }
