@@ -219,6 +219,7 @@ cc_binary(
     ],
     deps = [
         ":test_graph_mobilenetv1",  # link in the generated object file
+        "//tensorflow/compiler/aot:benchmark",
         "//third_party/eigen3",
     ],
     linkopts = [
