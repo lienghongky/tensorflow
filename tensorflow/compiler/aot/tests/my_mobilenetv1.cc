@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 
   get_file_to_float(foo, bmp_float);
 
-  Eigen::ThreadPool tp(8);  // Size the thread pool as appropriate.
+  Eigen::ThreadPool tp(4);  // Size the thread pool as appropriate.
   Eigen::ThreadPoolDevice device(&tp, tp.NumThreads());
 
   foobar::MobilenetV1 mobilenetv1;

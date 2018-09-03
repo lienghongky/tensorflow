@@ -13,6 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+#include <malloc.h>
+
 #include "tensorflow/compiler/tf2xla/cpu_function_runtime.h"
 
 #include "tensorflow/core/platform/dynamic_annotations.h"

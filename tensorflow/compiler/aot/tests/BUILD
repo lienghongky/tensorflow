@@ -209,7 +209,9 @@ tf_library(
     graph = "mobilenet_v1_1.0_224_frozen.pb",
     config = "mobilenetv1.pbtxt",
     #tfcompile_flags = "--target_cpu=x86-64 --target_features=+sse4.1 --target_features=+sse4.2 --target_features=+avx --target_features=+avx2 --target_features=+fma --xla_cpu_enable_fast_math",
-    tfcompile_flags = "--target_cpu=x86-64 --target_features=+sse4.1 --target_features=+sse4.2 --target_features=+avx --xla_cpu_enable_fast_math",
+    #tfcompile_flags = "--target_cpu=x86-64 --target_features=+sse4.1 --target_features=+sse4.2 --target_features=+avx --xla_cpu_enable_fast_math",
+    tfcompile_flags = "--target_features=+neon --xla_cpu_enable_fast_math",
+
 )
 
 cc_binary(
@@ -222,9 +224,23 @@ cc_binary(
         "//tensorflow/compiler/aot:benchmark",
         "//third_party/eigen3",
     ],
-    linkopts = [
-          "-lpthread",
-    ]
+    linkopts = select({
+        "//tensorflow:android": [
+            "-pie",
+            "-landroid",
+            "-ljnigraphics",
+            "-llog",
+            "-ldl",
+            "-lm",
+            "-z defs",
+            "-s",
+            "-Wl,--exclude-libs,ALL",
+        ],
+        "//conditions:default": [
+            "-lm",
+            "-lpthread",
+        ],
+    }),
 )
 
 tf_cc_test(
